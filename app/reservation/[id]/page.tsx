@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, use } from 'react'
 import { useCountdown } from '@/hooks/useCountdown'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 type Reservation = {
   id: string
@@ -53,26 +56,32 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
     setActionLoading(false)
   }
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>
-  if (!reservation) return <div className="p-8 text-center">Reservation not found.</div>
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>
+  if (!reservation) return <div className="p-8 text-center text-muted-foreground">Reservation not found.</div>
 
   return (
     <main className="max-w-md mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-6">Checkout</h1>
 
-      <div className="border border-gray-200 rounded-xl p-5 mb-4">
-        <p className="font-medium text-lg">{reservation.product.name}</p>
-        <p className="text-gray-500 text-sm mb-1">{reservation.warehouse.name}</p>
-        <p className="text-sm text-gray-500">Qty: {reservation.quantity}</p>
-        <p className="font-semibold text-xl mt-2">₹{reservation.product.price.toLocaleString()}</p>
-      </div>
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-lg">{reservation.product.name}</CardTitle>
+          <CardDescription>{reservation.warehouse.name}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Qty: {reservation.quantity}</p>
+          <p className="font-semibold text-xl mt-2">₹{reservation.product.price.toLocaleString()}</p>
+        </CardContent>
+      </Card>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-          <br />
-          <a href="/" className="underline mt-1 inline-block">← Back to products</a>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>
+            {error}
+            <br />
+            <a href="/" className="underline mt-1 inline-block">← Back to products</a>
+          </AlertDescription>
+        </Alert>
       )}
 
       {reservation.status === 'PENDING' && !isExpired && (
@@ -81,29 +90,34 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
             <span className="text-amber-700 font-mono text-lg font-bold">{display}</span>
             <span className="text-amber-600 text-sm">remaining to complete purchase</span>
           </div>
-          <button
+          <Button
+            className="w-full mb-3"
+            size="lg"
             onClick={handleConfirm}
             disabled={actionLoading}
-            className="w-full py-3 bg-black text-white rounded-xl font-medium mb-3 disabled:opacity-50 hover:bg-gray-800 transition-colors"
           >
             {actionLoading ? 'Processing...' : 'Confirm Purchase'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            size="lg"
             onClick={handleCancel}
             disabled={actionLoading}
-            className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
           >
             Cancel
-          </button>
+          </Button>
         </>
       )}
 
       {reservation.status === 'PENDING' && isExpired && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
-          <p className="font-medium">Reservation expired</p>
-          <p className="text-sm mt-1">The 10-minute window has passed.</p>
-          <a href="/" className="text-sm underline mt-2 inline-block">← Back to products</a>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium">Reservation expired</p>
+            <p className="text-sm mt-1">The 10-minute window has passed.</p>
+            <a href="/" className="text-sm underline mt-2 inline-block">← Back to products</a>
+          </AlertDescription>
+        </Alert>
       )}
 
       {reservation.status === 'CONFIRMED' && (
@@ -115,7 +129,7 @@ export default function ReservationPage({ params }: { params: Promise<{ id: stri
       )}
 
       {reservation.status === 'RELEASED' && (
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-600">
+        <div className="p-4 bg-muted border border-border rounded-xl text-muted-foreground">
           <p className="font-medium">Reservation cancelled</p>
           <p className="text-sm mt-1">The stock has been released back.</p>
           <a href="/" className="text-sm underline mt-2 inline-block">← Back to products</a>
