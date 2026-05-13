@@ -20,6 +20,7 @@ type Product = {
   price: number
   stockLevels: StockLevel[]
 }
+import { supabase } from '@/lib/supabase'
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -32,6 +33,38 @@ export default function HomePage() {
     fetch('/api/products')
       .then(r => r.json())
       .then(data => { setProducts(data); setLoading(false) })
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'StockLevel',
+        },
+        (payload) => {
+          setProducts((currentProducts) => {
+            return currentProducts.map(product => {
+              if (product.id === payload.new.productId) {
+                return {
+                  ...product,
+                  stockLevels: product.stockLevels.map(stock => {
+                    if (stock.id === payload.new.id) {
+                      return { ...stock, availableUnits: payload.new.availableUnits }
+                    }
+                    return stock
+                  })
+                }
+              }
+              return product
+            })
+          })
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   async function handleReserve(productId: string, warehouseId: string) {
