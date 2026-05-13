@@ -19,6 +19,8 @@ This is an inventory reservation system built for high-concurrency environments.
 - **Reservations**: Holds stock securely for 10 minutes.
 - **Idempotency**: Protects reservation endpoints from duplicate charge/reservation requests.
 - **Automated Expiry**: Vercel Cron triggers the `/api/cron/expire-reservations` endpoint every minute to release expired reservations back to available stock. Lazy cleanup is also performed on the `GET /api/products` route.
+- **Concurrency Stress Test**: Includes a `scripts/stress-test.ts` utility that fires 100 simultaneous requests at a single item to mathematically prove the `SELECT FOR UPDATE` lock successfully prevents overselling.
+- **Live Stock Updates**: Utilizes Supabase Realtime to broadcast PostgreSQL `UPDATE` events to the frontend, instantly updating available stock quantities on all connected clients without requiring a page refresh.
 
 ## Setup Instructions
 
