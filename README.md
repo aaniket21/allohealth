@@ -1,37 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Allo Health Inventory Reservation System
 
-## Getting Started
+Live Demo: [https://allohealthinventory.vercel.app/](https://allohealthinventory.vercel.app/)
 
-First, run the development server:
+## Overview
+This is an inventory reservation system built for high-concurrency environments. The system allows users to reserve items for a 10-minute window during checkout. It utilizes strict row-level locking via PostgreSQL (`SELECT FOR UPDATE`) within Prisma transactions to prevent overselling and race conditions when multiple users attempt to reserve the same stock level simultaneously.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech Stack
+- **Frontend**: Next.js 14+ (App Router), React, Tailwind CSS, shadcn/ui
+- **Backend**: Next.js Route Handlers
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: Prisma v7 (with `PrismaPg` driver adapter)
+- **Validation**: Zod
+- **Deployment**: Vercel
+- **Cron Jobs**: Vercel Cron
+
+## Key Features
+- **Concurrency Control**: Prevents overselling using atomic transactions and row-level locks.
+- **Reservations**: Holds stock securely for 10 minutes.
+- **Idempotency**: Protects reservation endpoints from duplicate charge/reservation requests.
+- **Automated Expiry**: Vercel Cron triggers the `/api/cron/expire-reservations` endpoint every minute to release expired reservations back to available stock. Lazy cleanup is also performed on the `GET /api/products` route.
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js (v18+)
+- PostgreSQL Database URL (e.g., Supabase)
+
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+DATABASE_URL="postgresql://user:pass@host:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://user:pass@host:5432/postgres"
+CRON_SECRET="your-secure-cron-secret"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Run database migrations:
+   ```bash
+   npx prisma migrate deploy
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Seed the database with initial products and warehouses:
+   ```bash
+   npx prisma db seed
+   ```
 
-## Learn More
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-  
+## Architecture
+The system logic is organized cleanly:
+- `lib/reservations.ts`: Core business logic for creating, confirming, and releasing reservations, encapsulating the database transactions and locks.
+- `lib/cleanup.ts`: Handles the logic for returning expired reservations back into available stock.
+- `lib/prisma.ts`: Prisma Client singleton leveraging `pg` pool to prevent connection exhaustion.
