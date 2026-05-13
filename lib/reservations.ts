@@ -57,3 +57,53 @@ export async function createReservation(
     })
   })
 }
+
+export async function confirmReservation(id: string) {
+  return await prisma.$transaction(async (tx) => {
+    const reservation = await tx.reservation.findUnique({ where: { id } })
+
+    if (!reservation) throw new Error('NOT_FOUND')
+    if (reservation.status === 'CONFIRMED') return reservation
+    if (reservation.status === 'RELEASED' || new Date() > reservation.expiresAt) {
+      throw new Error('EXPIRED')
+    }
+
+    // Payment succeeded:
+    await tx.$executeRaw`
+      UPDATE "StockLevel"
+      SET
+        "totalUnits" = "totalUnits" - ${reservation.quantity},
+        "reservedUnits" = "reservedUnits" - ${reservation.quantity}
+      WHERE "productId" = ${reservation.productId}
+        AND "warehouseId" = ${reservation.warehouseId}
+    `
+
+    return await tx.reservation.update({
+      where: { id },
+      data: { status: 'CONFIRMED' },
+      include: { product: true, warehouse: true }
+    })
+  })
+}
+
+export async function releaseReservation(id: string) {
+  return await prisma.$transaction(async (tx) => {
+    const reservation = await tx.reservation.findUnique({ where: { id } })
+
+    if (!reservation) throw new Error('NOT_FOUND')
+    if (reservation.status === 'RELEASED') return reservation
+    if (reservation.status === 'CONFIRMED') throw new Error('ALREADY_CONFIRMED')
+    await tx.$executeRaw`
+      UPDATE "StockLevel"
+      SET "reservedUnits" = "reservedUnits" - ${reservation.quantity}
+      WHERE "productId" = ${reservation.productId}
+        AND "warehouseId" = ${reservation.warehouseId}
+    `
+
+    return await tx.reservation.update({
+      where: { id },
+      data: { status: 'RELEASED' },
+      include: { product: true, warehouse: true }
+    })
+  })
+}
